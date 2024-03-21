@@ -4,6 +4,10 @@ import * as vscode from 'vscode';
 import * as findInFiles from 'find-in-files';
 import * as fs from 'fs';
 import * as path from 'path';
+import { TextParser } from './utils/text-parser';
+import { FactoryMatcBuilder } from './utils/factory-match-builder';
+import { TypeSetter } from './utils/type-setter';
+import { FunctionTypeEnum } from './utils/function-type.enum';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -19,23 +23,23 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.workspace.findFiles('**/*.ts', '**/node_modules/**').then((files) => {
             files.forEach((file) => {
                 const filePath = file.fsPath;
-                const fileContent = fs.readFileSync(filePath, 'utf-8');
-                const regex = /(?:\.factory\(')(\w+)'/g;
-                let match;
-                while (match = regex.exec(fileContent)) {
-                    const serviceName = match[1];
-                    const factoryRegex = /\.factory\([\s\n]*[\'\"][\s\n]*(\w+)[\n\s]*[\'\"][\n\s]*,[\n\s]*\[([\n\s]*[\'\"][\n\s]*\$?\w+[\n\s]*[\'\"][\n\s]*,?)+[\n\s]*function[\n\s]\((([\n\s]*\$?\w+[\n\s]*,?)+)\)[\n\s]*\{([\s\n.\w\W]*)\}[\n\s]*][\n\s]*\)[\n\s]*;/;
-					const functionRegex = 
-                    const factoryMatch = factoryRegex.exec(fileContent);
-                    if (factoryMatch) {
-                        const [, ,dependencies, params, , body] = factoryMatch;
-                        const paramList = params.split(',').map((param: string) => param.trim()).join(', ');
-                        const functionName = serviceName;
-                        const replacement = `function ${functionName}(${paramList}) { ${body} }`;
-                        const newContent = fileContent.replace(factoryRegex, replacement);
-                        fs.writeFileSync(filePath, newContent, 'utf-8');
-                    }
-                }
+                let fileContent = fs.readFileSync(filePath, 'utf-8');
+				const match = /[\s\n]*\w+[\s\n]*\.factory\([\s\n]*[\'\"][\s\n]*(\w+)[\n\s]*[\'\"][\n\s]*,[\n\s]*\[([\n\s]*[\'\"][\n\s]*\$?\w+[\n\s]*[\'\"][\n\s]*,?)+[\n\s]*(\w+|(function[\n\s]+(\w)*[\n\s]*\((([\n\s]*\$?\w+[\n\s]*,?)+)\)[\n\s]*\{([\s\n.\w\W]*)\}))[\n\s]*][\n\s]*\)[\n\s]*(;?|[\s\n]*)/g.exec(fileContent);
+				if(match){
+					try{
+						const mParser = new TextParser(fileContent);
+						mParser.factoryMatchs?.forEach((factoryMatch)=>{
+							if(factoryMatch.functionType !== FunctionTypeEnum.REFERENCED_FUNCTION){
+								fileContent = TypeSetter.extractFunction(fileContent, factoryMatch);
+							}
+							fileContent = TypeSetter.exportType(fileContent, factoryMatch);
+						});
+						fs.writeFileSync(filePath, fileContent, 'utf-8');
+					}catch(e: any){
+						vscode.window.showErrorMessage(e.message);
+					}
+				}
+				
             });
         });
     });

@@ -1,0 +1,5 @@
+export enum FunctionTypeEnum{
+    ANONYMOUS_FUCTION,
+    NAMED_FUNCTION,
+    REFERENCED_FUNCTION
+}
