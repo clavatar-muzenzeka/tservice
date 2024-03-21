@@ -6,10 +6,7 @@ export class TypeSetter {
 
   static exportType(argContent: string, factoryMatch: FactoryMatch): string {
     let content = argContent;
-    const type = 'I'+factoryMatch.factory.replace(
-        /^\w/,
-        (c: string) => c.toUpperCase()
-      );
+    const type = this.getType(factoryMatch);
     content += `\n\n/*\n* Export type ${type}\n*/\n\n`;
     
     content += `export type ${type} = ReturnType<typeof ${ factoryMatch.functionType === FunctionTypeEnum.REFERENCED_FUNCTION? factoryMatch.functionString : factoryMatch.functionName}>`;
@@ -29,5 +26,12 @@ export class TypeSetter {
     content += factoryMatch.functionType === FunctionTypeEnum.ANONYMOUS_FUCTION ? factoryMatch.functionString.replace('function', 'function '+factoryMatch.functionName) : factoryMatch.functionString;
     content += "\n\n";
     return content;
+  }
+
+  static getType(factoryMatch: FactoryMatch): string{
+    return 'I'+factoryMatch.factory.replace(
+        /^\w/,
+        (c: string) => c.toUpperCase()
+      );
   }
 }
